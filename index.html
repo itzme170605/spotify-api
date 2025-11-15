@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Spotify</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-top: 20px;
+        }
+        
+        header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #1db954;
+        }
+        
+        .login-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 20px;
+        }
+        
+        .manual-token {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .manual-token h3 {
+            color: #ffc107;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .manual-token p {
+            font-size: 12px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        
+        .manual-token code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 11px;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #1db954;
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        button {
+            background: #1db954;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background: #1ed760;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        .playlists {
+            margin-top: 20px;
+        }
+        
+        .playlist-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .playlist-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .playlist-item h3 {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .playlist-item p {
+            font-size: 12px;
+            color: #aaa;
+        }
+        
+        .song-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .song-info h4 {
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+        
+        .song-info p {
+            font-size: 12px;
+            color: #aaa;
+        }
+        
+        .song-link {
+            background: #1db954;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            text-decoration: none;
+            font-size: 12px;
+            text-align: center;
+            min-width: 50px;
+        }
+        
+        .back-btn {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 14px;
+        }
+        
+        .error {
+            background: rgba(244, 67, 54, 0.2);
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+        
+        .success {
+            background: rgba(76, 175, 80, 0.2);
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 My Spotify</h1>
+            <p>Playlists & Top Songs</p>
+        </header>
+        
+        <div id="app"></div>
+    </div>
+    
+    <script>
+        const CLIENT_ID = '1c1a9cb5613c4b9e862844801a077172';
+        
+        let accessToken = null;
+        let currentView = 'login';
+        let selectedPlaylist = null;
+        
+        const app = document.getElementById('app');
+        
+        function render() {
+            if (currentView === 'login') {
+                renderLogin();
+            } else if (currentView === 'playlists') {
+                renderPlaylists();
+            } else if (currentView === 'songs') {
+                renderSongs();
+            }
+        }
+        
+        function renderLogin() {
+            app.innerHTML = `
+                <div class="login-section">
+                    <p style="margin-bottom: 20px; text-align: center;">Manual Token Entry (bypass Spotify redirect issues)</p>
+                    <div class="manual-token">
+                        <h3>How to get your access token:</h3>
+                        <p>1. Open this in your browser:</p>
+                        <code style="display: block; word-break: break-all; margin: 10px 0;">https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=http://localhost:8888&scope=playlist-read-private%20playlist-read-collaborative%20user-top-read</code>
+                        <p>2. Log in and click Allow</p>
+                        <p>3. Copy the access_token from the URL (between access_token= and &token_type)</p>
+                        <p>4. Paste it below:</p>
+                    </div>
+                    <textarea id="tokenInput" placeholder="Paste your access token here..."></textarea>
+                    <button onclick="setToken()">Login with Token</button>
+                    <div class="small-text" style="font-size: 11px; color: #aaa; margin-top: 10px;">
+                        Your token is only stored in this browser session and never sent anywhere except to Spotify's API.
+                    </div>
+                </div>
+            `;
+        }
+        
+        function setToken() {
+            const token = document.getElementById('tokenInput').value.trim();
+            if (!token) {
+                app.innerHTML = `<div class="error">Please paste a token</div>` + app.innerHTML;
+                return;
+            }
+            accessToken = token;
+            currentView = 'playlists';
+            render();
+        }
+        
+        function renderPlaylists() {
+            app.innerHTML = `<div class="loading">Loading your playlists...</div>`;
+            fetchPlaylists();
+        }
+        
+        function renderPlaylistsList(playlists) {
+            let html = `
+                <div style="margin-bottom: 20px;">
+                    <button onclick="logout()" class="back-btn">Logout</button>
+                </div>
+                <div class="playlists">
+                    <h2 style="margin-bottom: 15px;">Your Playlists</h2>
+            `;
+            
+            if (playlists.length === 0) {
+                html += `<p style="text-align: center; color: #aaa;">No playlists found</p>`;
+            } else {
+                playlists.forEach(function(playlist) {
+                    html += `
+                        <div class="playlist-item" onclick="selectPlaylist('${playlist.id}', '${playlist.name.replace(/'/g, "\\'")}')">
+                            <h3>${playlist.name}</h3>
+                            <p>${playlist.tracks.total} songs</p>
+                        </div>
+                    `;
+                });
+            }
+            
+            html += `
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <h2 style="margin-bottom: 15px;">Your Top Songs</h2>
+                        <button onclick="viewTopSongs()" style="background: #1db954;">View Top 50 Songs</button>
+                    </div>
+                </div>
+            `;
+            
+            app.innerHTML = html;
+        }
+        
+        function renderSongs() {
+            app.innerHTML = `<div class="loading">Loading songs...</div>`;
+            fetchPlaylistSongs();
+        }
+        
+        function renderSongsList(songs, title) {
+            let html = `
+                <button onclick="goBack()" class="back-btn">← Back</button>
+                <h2 style="margin-bottom: 15px;">${title}</h2>
+                <div class="songs">
+            `;
+            
+            if (songs.length === 0) {
+                html += `<p style="text-align: center; color: #aaa;">No songs found</p>`;
+            } else {
+                songs.forEach(function(song) {
+                    if (!song) return;
+                    var artist = song.artists && song.artists[0] ? song.artists[0].name : 'Unknown';
+                    var url = song.external_urls && song.external_urls.spotify ? song.external_urls.spotify : '#';
+                    html += `
+                        <div class="song-item">
+                            <div class="song-info">
+                                <h4>${song.name}</h4>
+                                <p>${artist}</p>
+                            </div>
+                            <a href="${url}" target="_blank" class="song-link">Play</a>
+                        </div>
+                    `;
+                });
+            }
+            
+            html += `</div>`;
+            app.innerHTML = html;
+        }
+        
+        function fetchPlaylists() {
+            fetch('https://api.spotify.com/v1/me/playlists?limit=50', {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+                renderPlaylistsList(data.items || []);
+            })
+            .catch(function(err) {
+                app.innerHTML = `<div class="error">Error: ${err.message}. Your token may have expired.</div><button onclick="location.reload()">Try Again</button>`;
+            });
+        }
+        
+        function selectPlaylist(playlistId, playlistName) {
+            selectedPlaylist = { id: playlistId, name: playlistName };
+            currentView = 'songs';
+            render();
+        }
+        
+        function fetchPlaylistSongs() {
+            fetch('https://api.spotify.com/v1/playlists/' + selectedPlaylist.id + '/tracks?limit=50', {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+                var songs = (data.items || []).map(function(item) { return item.track; }).filter(function(s) { return s; });
+                renderSongsList(songs, selectedPlaylist.name);
+            })
+            .catch(function(err) {
+                app.innerHTML = `<div class="error">Error: ${err.message}</div>`;
+            });
+        }
+        
+        function viewTopSongs() {
+            app.innerHTML = `<div class="loading">Loading your top songs...</div>`;
+            
+            fetch('https://api.spotify.com/v1/me/top/tracks?limit=50', {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+                renderSongsList(data.items || [], 'Your Top 50 Songs');
+            })
+            .catch(function(err) {
+                app.innerHTML = `<div class="error">Error: ${err.message}</div>`;
+            });
+        }
+        
+        function goBack() {
+            currentView = 'playlists';
+            selectedPlaylist = null;
+            render();
+        }
+        
+        function logout() {
+            accessToken = null;
+            currentView = 'login';
+            render();
+        }
+        
+        window.addEventListener('load', function() {
+            render();
+        });
+    </script>
+</body>
+</html>
