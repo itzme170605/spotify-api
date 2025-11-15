@@ -49,6 +49,7 @@
             border: 1px solid rgba(255, 193, 7, 0.3);
             padding: 20px;
             border-radius: 8px;
+            margin-top: 20px;
             margin-bottom: 20px;
         }
         
@@ -197,6 +198,11 @@
             margin-bottom: 20px;
             font-size: 12px;
         }
+
+        .small-text {
+            font-size: 11px;
+            color: #aaa;
+        }
     </style>
 </head>
 <body>
@@ -211,12 +217,52 @@
     
     <script>
         const CLIENT_ID = '1c1a9cb5613c4b9e862844801a077172';
+
+        // IMPORTANT: change YOUR_GITHUB_USERNAME and repo name if different
+        const REDIRECT_URI = 'https://itzme170605.github.io/spotify-api/';
+
+        const SCOPES = [
+            'playlist-read-private',
+            'playlist-read-collaborative',
+            'user-top-read'
+        ];
         
         let accessToken = null;
         let currentView = 'login';
         let selectedPlaylist = null;
         
         const app = document.getElementById('app');
+
+        function buildAuthUrl() {
+            const params = new URLSearchParams({
+                client_id: CLIENT_ID,
+                response_type: 'token',        // implicit grant flow
+                redirect_uri: REDIRECT_URI,
+                scope: SCOPES.join(' ')
+            });
+            return `https://accounts.spotify.com/authorize?${params.toString()}`;
+        }
+
+        function loginWithSpotify() {
+            const authUrl = buildAuthUrl();
+            window.location.href = authUrl;
+        }
+
+        function getTokenFromHash() {
+            if (!window.location.hash) {
+                return null;
+            }
+            const hash = window.location.hash.substring(1); // remove '#'
+            const params = new URLSearchParams(hash);
+            const token = params.get('access_token');
+
+            if (token) {
+                // Optional: clean URL so token isn't visible in address bar
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            return token;
+        }
         
         function render() {
             if (currentView === 'login') {
@@ -229,20 +275,34 @@
         }
         
         function renderLogin() {
+            const authUrl = buildAuthUrl();
+
             app.innerHTML = `
                 <div class="login-section">
-                    <p style="margin-bottom: 20px; text-align: center;">Manual Token Entry (bypass Spotify redirect issues)</p>
+                    <p style="margin-bottom: 20px; text-align: center;">
+                        Sign in with Spotify to see your playlists and top tracks
+                    </p>
+
+                    <button onclick="loginWithSpotify()">Login with Spotify</button>
+
+                    <div style="margin: 15px 0; text-align: center; font-size: 11px; color: #ccc;">
+                        If the login button has issues, you can still use a manual access token (advanced).
+                    </div>
+
                     <div class="manual-token">
-                        <h3>How to get your access token:</h3>
-                        <p>1. Open this in your browser:</p>
-                        <code style="display: block; word-break: break-all; margin: 10px 0;">https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=http://localhost:8888&scope=playlist-read-private%20playlist-read-collaborative%20user-top-read</code>
-                        <p>2. Log in and click Allow</p>
-                        <p>3. Copy the access_token from the URL (between access_token= and &token_type)</p>
+                        <h3>Manual Token (fallback):</h3>
+                        <p>1. Open this in a browser where you are logged into Spotify:</p>
+                        <code style="display: block; word-break: break-all; margin: 10px 0;">
+                            ${authUrl}
+                        </code>
+                        <p>2. Log in and click "Allow".</p>
+                        <p>3. Copy the <code>access_token</code> from the URL (between <code>access_token=</code> and <code>&amp;token_type</code>).</p>
                         <p>4. Paste it below:</p>
                     </div>
+
                     <textarea id="tokenInput" placeholder="Paste your access token here..."></textarea>
                     <button onclick="setToken()">Login with Token</button>
-                    <div class="small-text" style="font-size: 11px; color: #aaa; margin-top: 10px;">
+                    <div class="small-text" style="margin-top: 10px;">
                         Your token is only stored in this browser session and never sent anywhere except to Spotify's API.
                     </div>
                 </div>
@@ -403,7 +463,14 @@
         }
         
         window.addEventListener('load', function() {
-            render();
+            const tokenFromUrl = getTokenFromHash();
+            if (tokenFromUrl) {
+                accessToken = tokenFromUrl;
+                currentView = 'playlists';
+                render();
+            } else {
+                render();
+            }
         });
     </script>
 </body>
